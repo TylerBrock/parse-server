@@ -50,8 +50,6 @@ import { UserController }       from './Controllers/UserController';
 import { UsersRouter }          from './Routers/UsersRouter';
 
 import ParsePushAdapter         from 'parse-server-push-adapter';
-// Mutate the Parse object to add the Cloud Code handlers
-addParseCloud();
 
 // ParseServer works like a constructor of an express app.
 // The args that we understand are:
@@ -91,6 +89,7 @@ class ParseServer {
     databaseURI,
     databaseOptions,
     cloud,
+    parseModule = Parse,
     collectionPrefix = '',
     clientKey,
     javascriptKey,
@@ -119,8 +118,8 @@ class ParseServer {
     revokeSessionOnPasswordReset = true,
   }) {
     // Initialize the node client SDK automatically
-    Parse.initialize(appId, javascriptKey || 'unused', masterKey);
-    Parse.serverURL = serverURL;
+    parseModule.initialize(appId, javascriptKey || 'unused', masterKey);
+    parseModule.serverURL = serverURL;
 
     if (logsFolder) {
       configureLogger({
@@ -135,9 +134,9 @@ class ParseServer {
     DatabaseAdapter.setAppDatabaseURI(appId, databaseURI);
 
     if (cloud) {
-      addParseCloud();
+      addParseCloud(parseModule);
       if (typeof cloud === 'function') {
-        cloud(Parse)
+        cloud(parseModule)
       } else if (typeof cloud === 'string') {
         require(path.resolve(process.cwd(), cloud));
       } else {
@@ -280,10 +279,10 @@ class ParseServer {
   }
 }
 
-function addParseCloud() {
+function addParseCloud(parseModule) {
   const ParseCloud = require("./cloud-code/Parse.Cloud");
-  Object.assign(Parse.Cloud, ParseCloud);
-  global.Parse = Parse;
+  Object.assign(parseModule.Cloud, ParseCloud);
+  global.Parse = parseModule;
 }
 
 export default ParseServer;
