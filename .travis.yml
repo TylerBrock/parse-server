@@ -6,9 +6,11 @@ env:
   global:
   - COVERAGE_OPTION='./node_modules/babel-istanbul/lib/cli.js cover -x **/spec/**'
   matrix:
-  - MONGODB_VERSION=2.6.11
-  - MONGODB_VERSION=3.0.8
-  - MONGODB_VERSION=3.2.6
+  - MONGODB_VERSION=2.6.11 MONGODB_STORAGE_ENGINE=mmapv1
+  - MONGODB_VERSION=3.0.8  MONGODB_STORAGE_ENGINE=mmapv1
+  - MONGODB_VERSION=3.0.8  MONGODB_STORAGE_ENGINE=wiredTiger
+  - MONGODB_VERSION=3.2.6  MONGODB_STORAGE_ENGINE=mmapv1
+  - MONGODB_VERSION=3.2.6  MONGODB_STORAGE_ENGINE=wiredTiger
 branches:
   only:
   - master
