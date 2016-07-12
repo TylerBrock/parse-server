@@ -327,8 +327,15 @@ class SchemaController {
     if (allowVolatileClasses && volatileClasses.indexOf(className) > -1) {
       return Promise.resolve(this.data[className]);
     }
-    return this._dbAdapter.getClass(className)
-    .then(injectDefaultSchema)
+    return this.getSchema().then((schemas) => {
+      const {fields, perms} = schemas[className] || {};
+      const schema = injectDefaultSchema({
+        className,
+        fields: fields || {},
+        classLevelPermissions: perms || {}
+      });
+      return Promise.resolve(schema);
+    });
   }
 
   // Create a new class that includes the three default fields.
