@@ -77,11 +77,11 @@ describe('Cloud Code', () => {
   });
 
   it('basic beforeSave rejection via promise', function(done) {
-    Parse.Cloud.beforeSave('BeforeSaveFailWithPromise', function (req, res) {
+    Parse.Cloud.beforeSave('BeforeSaveFailWithPromise', function(req, res) {
       var query = new Parse.Query('Yolo');
       query.find().then(() => {
-       res.error('Nope');
-      }, () => {
+        res.error('Nope');
+      }, (error) => {
         res.success();
       });
     });
@@ -487,7 +487,6 @@ describe('Cloud Code', () => {
 
     Parse.Cloud.afterSave('SaveTriggerUser', function(req) {
       if (!req.user || !req.user.id) {
-        console.log('No user present on request object for afterSave.');
       }
     });
 

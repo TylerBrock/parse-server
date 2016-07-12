@@ -552,6 +552,7 @@ describe('SchemaController', () => {
     config.database.loadSchema()
     .then(schema => {
       return schema.addClassIfNotExists('NewClass', {})
+      .then(() => schema.reloadData({ force: true }))
       .then(() => {
         schema.hasClass('NewClass')
         .then(hasClass => {
@@ -687,7 +688,7 @@ describe('SchemaController', () => {
         expect(exist).toEqual(false);
       })
       .then(() => schema.deleteField('relationField', 'NewClass', config.database))
-      .then(() => schema.reloadData())
+      .then(() => schema.reloadData({ force: true }))
       .then(() => {
         const expectedSchema = {
           objectId: { type: 'String' },

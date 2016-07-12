@@ -80,8 +80,9 @@ const validateQuery = query => {
   });
 }
 
-function DatabaseController(adapter) {
+function DatabaseController(adapter, cacheController) {
   this.adapter = adapter;
+  this.cache = cacheController;
 
   // We don't want a mutable this.schema, because then you could have
   // one request that uses different schemas for different parts of
@@ -109,7 +110,7 @@ DatabaseController.prototype.validateClassName = function(className) {
 // Returns a promise for a schemaController.
 DatabaseController.prototype.loadSchema = function() {
   if (!this.schemaPromise) {
-    this.schemaPromise = SchemaController.load(this.adapter);
+    this.schemaPromise = SchemaController.load(this.adapter, this.cache);
     this.schemaPromise.then(() => delete this.schemaPromise);
   }
   return this.schemaPromise;

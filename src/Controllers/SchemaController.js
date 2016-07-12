@@ -270,36 +270,51 @@ const dbTypeMatchesObjectType = (dbType, objectType) => {
 // the mongo format and the Parse format. Soon, this will all be Parse format.
 class SchemaController {
   _dbAdapter;
+  _cache;
   data;
   perms;
 
-  constructor(databaseAdapter) {
+  constructor(databaseAdapter, cache) {
     this._dbAdapter = databaseAdapter;
-
-    // this.data[className][fieldName] tells you the type of that field, in mongo format
-    this.data = {};
-    // this.perms[className][operation] tells you the acl-style permissions
-    this.perms = {};
+    this._cache = cache;
   }
 
-  reloadData() {
-    this.data = {};
-    this.perms = {};
-    return this.getAllClasses()
-    .then(allSchemas => {
-      allSchemas.forEach(schema => {
-        this.data[schema.className] = injectDefaultSchema(schema).fields;
-        this.perms[schema.className] = schema.classLevelPermissions;
-      });
+  getSchema(force) {
+    return this._cache.get('schema').then((schema) => {
+      if (!force && schema) {
+        return Promise.resolve(schema);
+      }
+      return this.getAllClasses().then((allSchemas) => {
+        const data = {};
+        const perms = {};
 
-      // Inject the in-memory classes
-      volatileClasses.forEach(className => {
-        this.data[className] = injectDefaultSchema({
-          className,
-          fields: {},
-          classLevelPermissions: {}
+        allSchemas.forEach((schema) => {
+          data[schema.className] = injectDefaultSchema(schema).fields;
+          perms[schema.className] = schema.classLevelPermissions;
         });
+
+        // Inject the in-memory classes
+        volatileClasses.forEach((className) => {
+          data[className] = injectDefaultSchema({
+            className,
+            fields: {},
+            classLevelPermissions: {}
+          });
+        });
+
+        schema = { data, perms };
+        this._cache.put('schema', schema);
+        return Promise.resolve(schema);
       });
+    });
+  }
+
+  reloadData(options = {}) {
+    return this.getSchema(options.force).then((schema) => {
+      // this.data[className][fieldName] tells you the type of that field, in mongo format
+      this.data = schema.data;
+      // this.perms[className][operation] tells you the acl-style permissions
+      this.perms = schema.perms;
     });
   }
 
@@ -376,7 +391,7 @@ class SchemaController {
       });
 
       return Promise.all(deletePromises) // Delete Everything
-      .then(() => this.reloadData()) // Reload our Schema, so we have all the new values
+      .then(() => this.reloadData({ force: true })) // Reload our Schema, so we have all the new values
       .then(() => {
         let promises = insertedFields.map(fieldName => {
           const type = submittedFields[fieldName];
@@ -410,13 +425,13 @@ class SchemaController {
     // We don't have this class. Update the schema
     return this.addClassIfNotExists(className)
     // The schema update succeeded. Reload the schema
-    .then(() => this.reloadData())
+    .then(() => this.reloadData({ force: true }))
     .catch(error => {
       // The schema update failed. This can be okay - it might
       // have failed because there's a race condition and a different
       // client is making the exact same schema update that we want.
       // So just reload the schema.
-      return this.reloadData();
+      return this.reloadData({ force: true });
     })
     .then(() => {
       // Ensure that the schema now validates
@@ -486,7 +501,7 @@ class SchemaController {
     }
     validateCLP(perms, newSchema);
     return this._dbAdapter.setClassLevelPermissions(className, perms)
-    .then(() => this.reloadData());
+    .then(() => this.reloadData({ force: true }));
   }
 
   // Returns a promise that resolves successfully to the new schema
@@ -525,14 +540,14 @@ class SchemaController {
 
       return this._dbAdapter.addFieldIfNotExists(className, fieldName, type).then(() => {
         // The update succeeded. Reload the schema
-        return this.reloadData();
+        return this.reloadData({ force: true });
       }, error => {
         //TODO: introspect the error and only reload if the error is one for which is makes sense to reload
 
         // The update failed. This can be okay - it might have been a race
         // condition where another client updated the schema in the same
         // way that we wanted to. So, just reload the schema
-        return this.reloadData();
+        return this.reloadData({ force: true });
       }).then(error => {
         // Ensure that the schema now validates
         if (!dbTypeMatchesObjectType(this.getExpectedType(className, fieldName), type)) {
@@ -711,9 +726,9 @@ class SchemaController {
 }
 
 // Returns a promise for a new Schema.
-const load = dbAdapter => {
-  let schema = new SchemaController(dbAdapter);
-  return schema.reloadData().then(() => schema);
+const load = (dbAdapter, cache) => {
+  let schema = new SchemaController(dbAdapter, cache);
+  return schema.reloadData({ force: true }).then(() => schema);
 }
 
 // Builds a new schema (in schema API response format) out of an

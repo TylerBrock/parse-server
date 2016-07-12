@@ -192,7 +192,7 @@ class ParseServer {
     const userController = new UserController(emailControllerAdapter, appId, { verifyUserEmails });
     const liveQueryController = new LiveQueryController(liveQuery);
     const cacheController = new CacheController(cacheControllerAdapter, appId);
-    const databaseController = new DatabaseController(databaseAdapter);
+    const databaseController = new DatabaseController(databaseAdapter, cacheController);
     const hooksController = new HooksController(appId, databaseController, webhookKey);
 
     // TODO: create indexes on first creation of a _User object. Otherwise it's impossible to
