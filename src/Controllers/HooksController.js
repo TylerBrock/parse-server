@@ -171,9 +171,12 @@ function wrapToHTTPRequest(hook, key) {
       jsonBody.original = req.original.toJSON();
       jsonBody.original.className = req.original.className;
     }
+
+    const client = req.ips && req.ips[0] || req.ip;
     const jsonRequest: any = {
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Forwarded-For': client
       },
       body: JSON.stringify(jsonBody)
     };

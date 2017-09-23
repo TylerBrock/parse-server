@@ -330,6 +330,28 @@ describe('Hooks', () => {
 
   it("should run the function on the test server", (done) => {
 
+    app.post("/clientEcho", function(req, res) {
+      res.json({ success: req.get('X-Forwarded-For') });
+    });
+
+    Parse.Hooks.createFunction("FORWARD", hookServerURL + "/clientEcho").then(function(){
+      return Parse.Cloud.run("FORWARD")
+    }, (err) => {
+      jfail(err);
+      fail("Should not fail calling a function");
+      done();
+    }).then(function(res){
+      expect(res).toBe("OK!");
+      done();
+    }, (err) => {
+      jfail(err);
+      fail("Should not fail calling a function");
+      done();
+    });
+  });
+
+  it("should run the function on the test server", (done) => {
+
     app.post("/SomeFunctionError", function(req, res) {
       res.json({error: {code: 1337, error: "hacking that one!"}});
     });
